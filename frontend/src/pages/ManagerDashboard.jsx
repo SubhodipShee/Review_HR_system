@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Users, ClipboardList, CheckCircle, User, Sparkles, RefreshCw, Search, MessageSquare } from 'lucide-react'
+import { Users, ClipboardList, CheckCircle, User, Sparkles, RefreshCw, Search, MessageSquare, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Navbar from '../components/Navbar'
 import ScoreSlider from '../components/ScoreSlider'
@@ -32,6 +32,7 @@ const INITIAL_FORM = {
 export default function ManagerDashboard() {
   const { user } = useAuth()
   const { reviews, loading: reviewsLoading, refetch } = useReviews()
+  const [activeModal, setActiveModal] = useState(null)
   const [form, setForm] = useState(INITIAL_FORM)
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
@@ -143,6 +144,15 @@ export default function ManagerDashboard() {
     ? (reviews.reduce((sum, r) => sum + (r.averageScore || 0), 0) / reviews.length).toFixed(2)
     : '—'
 
+  const latestReview = reviews.length > 0
+    ? [...reviews].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0]
+    : null
+  const latestReviewDate = latestReview ? formatDate(latestReview.timestamp) : '—'
+  const lastReviewedEmployee = latestReview ? latestReview.employeeName : '—'
+  const highestTeamScore = reviews.length > 0
+    ? Math.max(...reviews.map((r) => r.averageScore || 0)).toFixed(2)
+    : '—'
+
   return (
     <div className="min-h-screen bg-surface">
       <Navbar />
@@ -160,24 +170,28 @@ export default function ManagerDashboard() {
             label="Total Reviews"
             value={reviewsLoading ? '…' : totalReviews}
             color="primary"
+            onClick={() => setActiveModal('totalReviews')}
           />
           <StatCard
             icon={<Users className="w-5 h-5" />}
             label="Employees Reviewed"
             value={reviewsLoading ? '…' : uniqueEmployees}
             color="secondary"
+            onClick={() => setActiveModal('employeesReviewed')}
           />
           <StatCard
             icon={<User className="w-5 h-5" />}
             label="Team Size"
             value={EMPLOYEES.length}
             color="accent"
+            onClick={() => setActiveModal('teamSize')}
           />
           <StatCard
             icon={<CheckCircle className="w-5 h-5" />}
             label="Team Avg Score"
             value={reviewsLoading ? '…' : avgAll}
             color="amber"
+            onClick={() => setActiveModal('teamAvgScore')}
           />
         </div>
 
@@ -508,6 +522,114 @@ export default function ManagerDashboard() {
           </div>
         </div>
       </main>
+
+      {/* Detail Modal */}
+      {activeModal && (
+        <div 
+          className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn"
+          onClick={() => setActiveModal(null)}
+        >
+          <div 
+            className="bg-card w-full max-w-sm rounded-2xl border border-slate-800/80 p-6 shadow-2xl relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button 
+              onClick={() => setActiveModal(null)}
+              className="absolute top-4 right-4 text-text-secondary hover:text-white transition-colors"
+              aria-label="Close modal"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {activeModal === 'totalReviews' && (
+              <div>
+                <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                  <ClipboardList className="w-5 h-5 text-primary-400" />
+                  Total Reviews Details
+                </h3>
+                <div className="space-y-4">
+                  <div className="bg-slate-950/40 p-4 rounded-xl border border-slate-800/60">
+                    <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Total Reviews</span>
+                    <span className="text-2xl font-bold text-white">{reviewsLoading ? '…' : totalReviews}</span>
+                  </div>
+                  <div className="bg-slate-950/40 p-4 rounded-xl border border-slate-800/60">
+                    <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Latest Review Date</span>
+                    <span className="text-lg font-bold text-white">{reviewsLoading ? '…' : latestReviewDate}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeModal === 'employeesReviewed' && (
+              <div>
+                <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                  <Users className="w-5 h-5 text-secondary-400" />
+                  Employees Reviewed Details
+                </h3>
+                <div className="space-y-4">
+                  <div className="bg-slate-950/40 p-4 rounded-xl border border-slate-800/60">
+                    <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Number of Employees Reviewed</span>
+                    <span className="text-2xl font-bold text-white">{reviewsLoading ? '…' : uniqueEmployees}</span>
+                  </div>
+                  <div className="bg-slate-950/40 p-4 rounded-xl border border-slate-800/60">
+                    <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Last Reviewed Employee</span>
+                    <span className="text-lg font-bold text-white">{reviewsLoading ? '…' : lastReviewedEmployee}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeModal === 'teamSize' && (
+              <div>
+                <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                  <User className="w-5 h-5 text-accent-400" />
+                  Team Size Details
+                </h3>
+                <div className="space-y-4">
+                  <div className="bg-slate-950/40 p-4 rounded-xl border border-slate-800/60">
+                    <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Total Team Members</span>
+                    <span className="text-2xl font-bold text-white">{EMPLOYEES.length}</span>
+                  </div>
+                  
+                  <div className="bg-slate-950/40 p-4 rounded-xl border border-slate-800/60 flex flex-col">
+                    <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2.5">Team Members List</span>
+                    <div className="space-y-2 max-h-48 overflow-y-auto pr-1 scrollbar-hide">
+                      {EMPLOYEES.map((emp) => (
+                        <div key={emp.id} className="p-2.5 bg-[#0F1934]/60 border border-slate-800/50 rounded-lg flex flex-col gap-0.5">
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs font-bold text-white">{emp.name}</span>
+                            <span className="text-[10px] text-accent-400 font-mono bg-accent-950/30 px-1.5 py-0.5 rounded border border-accent-800/30">ID: {emp.id}</span>
+                          </div>
+                          <span className="text-[11px] text-text-secondary">{emp.email}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeModal === 'teamAvgScore' && (
+              <div>
+                <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-amber-400" />
+                  Team Average Score Details
+                </h3>
+                <div className="space-y-4">
+                  <div className="bg-slate-950/40 p-4 rounded-xl border border-slate-800/60">
+                    <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Team Average Score</span>
+                    <span className="text-2xl font-bold text-white">{reviewsLoading ? '…' : avgAll}</span>
+                  </div>
+                  <div className="bg-slate-950/40 p-4 rounded-xl border border-slate-800/60">
+                    <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Highest Team Score</span>
+                    <span className="text-lg font-bold text-white">{reviewsLoading ? '…' : highestTeamScore}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

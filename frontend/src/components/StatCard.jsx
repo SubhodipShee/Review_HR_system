@@ -1,7 +1,7 @@
 /**
  * Stat card with icon, value, label, and optional change indicator
  */
-export default function StatCard({ icon, label, value, sub, color = 'primary' }) {
+export default function StatCard({ icon, label, value, sub, color = 'primary', onClick }) {
   const colorMap = {
     primary: 'from-primary-400 to-primary-500 text-slate-950',
     secondary: 'from-secondary-400 to-secondary-500 text-white',
@@ -10,7 +10,14 @@ export default function StatCard({ icon, label, value, sub, color = 'primary' })
   }
 
   return (
-    <div className="card-sm flex items-center gap-4">
+    <div 
+      onClick={onClick}
+      className={`card-sm flex items-center gap-4 ${
+        onClick 
+          ? 'cursor-pointer hover:border-slate-700/80 active:scale-[0.98] transition-all duration-200' 
+          : ''
+      }`}
+    >
       <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${colorMap[color] || colorMap.primary} flex items-center justify-center shadow-md flex-shrink-0`}>
         {icon}
       </div>
