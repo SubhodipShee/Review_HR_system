@@ -1,16 +1,17 @@
-import { useMemo } from 'react'
-import { Star, TrendingUp, BarChart2, Calendar } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { Star, TrendingUp, BarChart2, Calendar, X } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import ReviewCard from '../components/ReviewCard'
 import AIInsightsCard from '../components/AIInsightsCard'
 import StatCard from '../components/StatCard'
 import { useAuth } from '../context/AuthContext'
 import { useEmployeeReviews } from '../hooks/useReviews'
-import { scoreBgColor, scoreLabel } from '../utils/helpers'
+import { scoreBgColor, scoreLabel, formatDate, formatMonth } from '../utils/helpers'
 
 export default function EmployeeDashboard() {
   const { user } = useAuth()
   const { reviews, loading } = useEmployeeReviews(user?.id)
+  const [activeModal, setActiveModal] = useState(null)
 
   const sorted = useMemo(
     () => [...reviews].sort((a, b) => (b.month > a.month ? 1 : -1)),
@@ -23,6 +24,36 @@ export default function EmployeeDashboard() {
   }, [reviews])
 
   const latestReview = sorted[0]
+
+  const highestScore = useMemo(() => {
+    if (!reviews.length) return null
+    return Math.max(...reviews.map((r) => r.averageScore || 0)).toFixed(2)
+  }, [reviews])
+
+  const lowestScore = useMemo(() => {
+    if (!reviews.length) return null
+    return Math.min(...reviews.map((r) => r.averageScore || 0)).toFixed(2)
+  }, [reviews])
+
+  const avgOutput = useMemo(() => {
+    if (!reviews.length) return null
+    return (reviews.reduce((sum, r) => sum + (r.outputQuality || 0), 0) / reviews.length).toFixed(2)
+  }, [reviews])
+
+  const highestOutput = useMemo(() => {
+    if (!reviews.length) return null
+    return Math.max(...reviews.map((r) => r.outputQuality || 0))
+  }, [reviews])
+
+  const avgTeamwork = useMemo(() => {
+    if (!reviews.length) return null
+    return (reviews.reduce((sum, r) => sum + (r.teamwork || 0), 0) / reviews.length).toFixed(2)
+  }, [reviews])
+
+  const highestTeamwork = useMemo(() => {
+    if (!reviews.length) return null
+    return Math.max(...reviews.map((r) => r.teamwork || 0))
+  }, [reviews])
 
   return (
     <div className="min-h-screen bg-surface">
@@ -49,12 +80,14 @@ export default function EmployeeDashboard() {
             label="Total Reviews"
             value={loading ? '…' : reviews.length}
             color="primary"
+            onClick={() => setActiveModal('totalReviews')}
           />
           <StatCard
             icon={<Star className="w-5 h-5" />}
             label="Overall Average"
             value={loading ? '…' : (avgScore || '—')}
             color="secondary"
+            onClick={() => setActiveModal('overallAverage')}
           />
           <StatCard
             icon={<BarChart2 className="w-5 h-5" />}
@@ -62,6 +95,7 @@ export default function EmployeeDashboard() {
             value={loading ? '…' : (latestReview?.outputQuality || '—')}
             sub="Output Quality"
             color="accent"
+            onClick={() => setActiveModal('latestOutput')}
           />
           <StatCard
             icon={<TrendingUp className="w-5 h-5" />}
@@ -69,6 +103,7 @@ export default function EmployeeDashboard() {
             value={loading ? '…' : (latestReview?.teamwork || '—')}
             sub="Teamwork Score"
             color="amber"
+            onClick={() => setActiveModal('latestTeamwork')}
           />
         </div>
 
@@ -150,6 +185,123 @@ export default function EmployeeDashboard() {
           </div>
         </div>
       </main>
+
+      {/* Detail Modal */}
+      {activeModal && (
+        <div 
+          className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn"
+          onClick={() => setActiveModal(null)}
+        >
+          <div 
+            className="bg-card w-full max-w-sm rounded-2xl border border-slate-800/80 p-6 shadow-2xl relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button 
+              onClick={() => setActiveModal(null)}
+              className="absolute top-4 right-4 text-text-secondary hover:text-white transition-colors"
+              aria-label="Close modal"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {activeModal === 'totalReviews' && (
+              <div>
+                <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-primary-400" />
+                  Total Reviews Details
+                </h3>
+                <div className="space-y-4">
+                  <div className="bg-slate-950/40 p-4 rounded-xl border border-slate-800/60">
+                    <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Total Reviews</span>
+                    <span className="text-2xl font-bold text-white">{loading ? '…' : reviews.length}</span>
+                  </div>
+                  <div className="bg-slate-950/40 p-4 rounded-xl border border-slate-800/60">
+                    <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Latest Review Month</span>
+                    <span className="text-lg font-bold text-white">{loading ? '…' : (latestReview ? formatMonth(latestReview.month) : '—')}</span>
+                  </div>
+                  <div className="bg-slate-950/40 p-4 rounded-xl border border-slate-800/60">
+                    <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Latest Review Date</span>
+                    <span className="text-lg font-bold text-white">{loading ? '…' : (latestReview ? formatDate(latestReview.timestamp) : '—')}</span>
+                  </div>
+                  <div className="bg-slate-950/40 p-4 rounded-xl border border-slate-800/60">
+                    <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Reviewed By</span>
+                    <span className="text-lg font-bold text-white">{loading ? '…' : (latestReview?.managerName || '—')}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeModal === 'overallAverage' && (
+              <div>
+                <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                  <Star className="w-5 h-5 text-secondary-400" />
+                  Overall Average Details
+                </h3>
+                <div className="space-y-4">
+                  <div className="bg-slate-950/40 p-4 rounded-xl border border-slate-800/60">
+                    <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Overall Average Score</span>
+                    <span className="text-2xl font-bold text-white">{loading ? '…' : (avgScore || '—')}</span>
+                  </div>
+                  <div className="bg-slate-950/40 p-4 rounded-xl border border-slate-800/60">
+                    <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Highest Score Achieved</span>
+                    <span className="text-lg font-bold text-white">{loading ? '…' : (highestScore || '—')}</span>
+                  </div>
+                  <div className="bg-slate-950/40 p-4 rounded-xl border border-slate-800/60">
+                    <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Lowest Score Achieved</span>
+                    <span className="text-lg font-bold text-white">{loading ? '…' : (lowestScore || '—')}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeModal === 'latestOutput' && (
+              <div>
+                <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                  <BarChart2 className="w-5 h-5 text-accent-400" />
+                  Latest Output Details
+                </h3>
+                <div className="space-y-4">
+                  <div className="bg-slate-950/40 p-4 rounded-xl border border-slate-800/60">
+                    <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Latest Output Quality</span>
+                    <span className="text-2xl font-bold text-white">{loading ? '…' : (latestReview?.outputQuality || '—')}</span>
+                  </div>
+                  <div className="bg-slate-950/40 p-4 rounded-xl border border-slate-800/60">
+                    <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Average Output Quality</span>
+                    <span className="text-lg font-bold text-white">{loading ? '…' : (avgOutput || '—')}</span>
+                  </div>
+                  <div className="bg-slate-950/40 p-4 rounded-xl border border-slate-800/60">
+                    <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Highest Output Quality</span>
+                    <span className="text-lg font-bold text-white">{loading ? '…' : (highestOutput || '—')}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeModal === 'latestTeamwork' && (
+              <div>
+                <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-amber-400" />
+                  Latest Teamwork Details
+                </h3>
+                <div className="space-y-4">
+                  <div className="bg-slate-950/40 p-4 rounded-xl border border-slate-800/60">
+                    <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Latest Teamwork Score</span>
+                    <span className="text-2xl font-bold text-white">{loading ? '…' : (latestReview?.teamwork || '—')}</span>
+                  </div>
+                  <div className="bg-slate-950/40 p-4 rounded-xl border border-slate-800/60">
+                    <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Average Teamwork Score</span>
+                    <span className="text-lg font-bold text-white">{loading ? '…' : (avgTeamwork || '—')}</span>
+                  </div>
+                  <div className="bg-slate-950/40 p-4 rounded-xl border border-slate-800/60">
+                    <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Highest Teamwork Score</span>
+                    <span className="text-lg font-bold text-white">{loading ? '…' : (highestTeamwork || '—')}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
