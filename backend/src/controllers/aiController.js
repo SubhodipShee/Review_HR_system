@@ -41,7 +41,7 @@ export async function getAISummary(req, res, next) {
  */
 export async function analyzeFeedback(req, res, next) {
   try {
-    const { outputQuality, attendance, teamwork, comment } = req.body
+    const { outputQuality, attendance, teamwork, comment, employeeName } = req.body
 
     if (!outputQuality || !attendance || !teamwork) {
       return res.status(400).json({ message: 'outputQuality, attendance and teamwork scores are required' })
@@ -54,7 +54,8 @@ export async function analyzeFeedback(req, res, next) {
       Number(outputQuality),
       Number(attendance),
       Number(teamwork),
-      comment.trim()
+      comment.trim(),
+      employeeName
     )
 
     res.json({ analysis })

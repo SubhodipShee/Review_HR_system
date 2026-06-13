@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Users, ClipboardList, CheckCircle, User, ChevronDown, Sparkles, RefreshCw, Search, MessageSquare } from 'lucide-react'
+import { Users, ClipboardList, CheckCircle, User, Sparkles, RefreshCw, Search, MessageSquare } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Navbar from '../components/Navbar'
 import ScoreSlider from '../components/ScoreSlider'
@@ -8,6 +8,7 @@ import { reviewsApi, aiApi } from '../services/api'
 import { useReviews } from '../hooks/useReviews'
 import { useAuth, USERS } from '../context/AuthContext'
 import { calcAverage, formatMonth, getMonthOptions, scoreBgColor, formatDate, getInitials } from '../utils/helpers'
+import MarkdownRenderer from '../components/MarkdownRenderer'
 
 // Employees available for review (from hardcoded users)
 const EMPLOYEES = USERS.filter((u) => u.role === 'employee').map((u) => ({
@@ -47,6 +48,7 @@ export default function ManagerDashboard() {
         attendance: form.attendance,
         teamwork: form.teamwork,
         comment: form.comment,
+        employeeName: form.employeeName,
       })
       setAiAnalysis(data.analysis)
       if (data.analysis.isInconsistent) {
@@ -267,8 +269,8 @@ export default function ManagerDashboard() {
                   <span className="text-xs">Analyzing spreadsheet data & formulating answer...</span>
                 </div>
               ) : (
-                <div className="text-sm text-slate-200 leading-relaxed whitespace-pre-line">
-                  {hrAnswer}
+                <div className="text-sm text-slate-200 leading-relaxed">
+                  <MarkdownRenderer content={hrAnswer} />
                 </div>
               )}
             </div>

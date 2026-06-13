@@ -74,7 +74,7 @@ Keep all responses concise, professional, and constructive. Focus on the data pr
  * Analyze manager feedback vs scores for consistency and suggest constructive improvements.
  * Returns: { isInconsistent, explanation, suggestion }
  */
-export async function analyzeFeedbackConsistency(outputQuality, attendance, teamwork, comment) {
+export async function analyzeFeedbackConsistency(outputQuality, attendance, teamwork, comment, employeeName) {
   if (!process.env.CLAUDE_API_KEY) {
     throw new Error('Claude API key not configured')
   }
@@ -95,6 +95,11 @@ Manager's Written Feedback:
 Evaluate:
 1. **Consistency**: Does the written comment match the scores? (e.g. 5/5 score but negative comment is highly inconsistent; 1/5 score but praise is inconsistent). Set "isInconsistent" to true if there is a mismatch.
 2. **Improvement Suggestion**: Write an improved, more constructive, professional, and action-oriented version of the feedback. If the comment is very short (e.g. "Good", "Fine", "Nice work"), expand it into a detailed performance feedback paragraph that references the score context.
+${
+  employeeName
+    ? `The employee being reviewed is named "${employeeName}". You MUST address them by their name in the suggested feedback (e.g., using their name like "Hi ${employeeName}, ..."). Do NOT use placeholder tags like "[Employee Name]" or "{Employee Name}".`
+    : `No employee name is provided. Write the feedback suggestion directly without any name salutation, and do NOT use placeholders like "[Employee Name]" or "{Employee Name}".`
+}
 
 Respond with a JSON object containing exactly these fields:
 {
@@ -119,7 +124,26 @@ Return ONLY valid JSON. No extra text or markdown formatting outside the JSON.`
   }
 
   try {
-    return JSON.parse(jsonMatch[0])
+    const parsed = JSON.parse(jsonMatch[0])
+    
+    // Post-process suggestion to guarantee no placeholder tags leak through
+    if (parsed && typeof parsed.suggestion === 'string') {
+      let sug = parsed.suggestion
+      if (employeeName) {
+        sug = sug.replace(/\[Employee Name\]/gi, employeeName)
+        sug = sug.replace(/\{Employee Name\}/gi, employeeName)
+        sug = sug.replace(/\[Employee\]/gi, employeeName)
+        sug = sug.replace(/\{Employee\}/gi, employeeName)
+      } else {
+        sug = sug.replace(/\[Employee Name\],?\s*/gi, '')
+        sug = sug.replace(/\{Employee Name\},?\s*/gi, '')
+        sug = sug.replace(/\[Employee\],?\s*/gi, '')
+        sug = sug.replace(/\{Employee\},?\s*/gi, '')
+      }
+      parsed.suggestion = sug
+    }
+    
+    return parsed
   } catch {
     throw new Error('Invalid AI response format. Please try again.')
   }
